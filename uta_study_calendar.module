@@ -20,9 +20,26 @@ function getTaxonomyTerm($keyword) {
   return $tids;
 }
 
+// Checks if the course code and event id combo already exists in some node
+function nodeExists($code $id) {
+
+  $nodes = \Drupal::entityTypeManager()
+    ->getStorage('node')
+    ->loadByProperties(['field_course_code' => $code, 'field_event_id' => $id]);
+
+  $found = false;
+  foreach ($nodes as $n) {
+    $found = true;
+    print("Node found\n");
+  }
+
+  return $found;
+}
+
 
 
 function uta_study_calendar_cron() {
+  //entity_delete_multiple('node', \Drupal::entityQuery('node')->execute());
 
   $jsonObjectArray = json_decode(file_get_contents("http://localhost/data_bu.txt"));
   print(count($jsonObjectArray) . "\n");
