@@ -4,35 +4,36 @@
 
 use Drupal\node\Entity\Node;
 
+// Every course is item in taxonomy, thus enabling easy filtering
 function getTaxonomyTerm($keyword) {
   $query = \Drupal::entityQuery('taxonomy_term');
-  $query->condition('vid', "tags");
+  $query->condition('vid', "courses");
   $query->condition('name', $keyword);
   $tids = $query->execute();
   if(empty($tids)) {
     $term = \Drupal\taxonomy\Entity\Term::create([
-      'vid' => 'tags',
+      'vid' => 'courses',
       'name' => $keyword,
     ]);
     $term->save();
-    return $term;
+    print("Term created");
   }
   return $tids;
 }
 
 // Checks if the course code and event id combo already exists in some node
-function nodeExists($code $id) {
-
+function nodeExists($courseId, $eventId, $eventUnixTimestamp) {
   $nodes = \Drupal::entityTypeManager()
     ->getStorage('node')
-    ->loadByProperties(['field_course_code' => $code, 'field_event_id' => $id]);
-
+    ->loadByProperties(['field_course_id' => $courseId,
+                        'field_event_id' => $eventId,
+                        'field_unix_timestamp' => $eventUnixTimestamp
+                      ]);
   $found = false;
   foreach ($nodes as $n) {
     $found = true;
     print("Node found\n");
   }
-
   return $found;
 }
 
@@ -40,23 +41,22 @@ function nodeExists($code $id) {
 
 function uta_study_calendar_cron() {
   //entity_delete_multiple('node', \Drupal::entityQuery('node')->execute());
-
-  $jsonObjectArray = json_decode(file_get_contents("http://localhost/data_bu.txt"));
-  print(count($jsonObjectArray) . "\n");
+  $jsonObjectArray = json_decode(file_get_contents("http://localhost/lukkari_data.json"));
+  //print(count($jsonObjectArray) . "\n");
   $toistuvuus = [];
   $killSwitch = 0;
   foreach ($jsonObjectArray as $course) {
-    print($course->name . " - ");
-    print($course->name . ":\n");
+    //print($course->name . " - ");
+    //print($course->name . ":\n");
     foreach ($course->_opsi_opryhmat as $opryhmat) {
       //print_r($opryhmat);
-      if(isset($opryhmat->nimi))
+      if (isset($opryhmat->nimi))
         //print(">>" . $opryhmat->nimi . "\n");
       foreach ($opryhmat->ajat as $ajat) {
         //$date = date("Y-m-d\TH:i:s\Z", $ajat->alkuaika / 1000);
         $unixTime = $ajat->alkuaika / 1000;
         $date = date("Y-m-d", $unixTime);
-        if(isset($ajat->toistuvuus_kertaa)) {
+        if (isset($ajat->toistuvuus_kertaa)) {
           for ($i = $ajat->toistuvuus_kertaa; $i > 0; $i--) {
             //print(">> " . $ajat->paikka . " " . date("Y-m-d", $unixTime) . " klo: " . $ajat->alkutunnit . " - " . $ajat->lopputunnit . "\n");
             if ($ajat->toistuvuustyyppi == "Kuukausittain") {
@@ -73,41 +73,38 @@ function uta_study_calendar_cron() {
               $unixTime = strtotime("+7 day", $unixTime);
             }
             //print($date . "\n");
-
+            if (nodeExists($course->id, $ajat->id, $unixTime)){
+              continue;
+            }
             $newJob = Node::create([
-              'type' => 'event',
+              'type' => 'course_event',
               'title' => $course->name,
-              'body' => $opryhmat->nimi,
-              'field_testitermi' => getTaxonomyTerm($course->name),
-              'field_event_datetime' => [date("Y-m-d", $unixTime) . "T" . $ajat->alkutunnit . ":00:00",],
-              'field_event_datetime2' => [date("Y-m-d", $unixTime) . "T" . $ajat->lopputunnit . ":00:00",],
+              'field_study_group' => $opryhmat->nimi,
+              'field_course_id' => $course->id,
+              'field_event_id' => $ajat->id,
+              'field_unix_timestamp' => $ajat->alkutunnit,
+              'field_course_taxonomy' => getTaxonomyTerm($course->name),
+              'field_event_start' => [date("Y-m-d", $unixTime) . "T" . $ajat->alkutunnit . ":00:00",],
+              'field_event_end' => [date("Y-m-d", $unixTime) . "T" . $ajat->lopputunnit . ":00:00",],
             ]);
             $killSwitch++;
             $newJob->save();
+            print("Node created\n");
+
 
             //print(date("Y-m-d", $unixTime) . "T" . $ajat->alkutunnit . ":00:00\n");
 
             //print("Node created\n");
-            //if ($killSwitch > 100)
-              //die();
+            //if ($killSwitch > 10)
+            //  die();
 
 
           }
         }
         $toistuvuus[] = $ajat->toistuvuustyyppi;
-  /*      [0] => Viikoittain
-  [18] =>
-  [341] => Joka toinen viikko
-  [1374] => Kuukausittain
-  */
-        //print($ajat->toistuvuustyyppi . "\n");
+
       }
 
     }
-    //die();
   }
-
-
-  //print_r(array_unique($toistuvuus));
 }
-
