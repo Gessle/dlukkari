@@ -27,8 +27,9 @@ function nodeExists($courseId, $eventId, $eventUnixTimestamp) {
     ->getStorage('node')
     ->loadByProperties(['field_course_id' => $courseId,
                         'field_event_id' => $eventId,
-                        'field_unix_timestamp' => $eventUnixTimestamp
+                        'field_unix_timestamp' => $eventUnixTimestamp,
                       ]);
+  print($courseId . " " . $eventId . " " . $eventUnixTimestamp . "\n");
   $found = false;
   foreach ($nodes as $n) {
     $found = true;
@@ -58,7 +59,6 @@ function uta_study_calendar_cron() {
         $date = date("Y-m-d", $unixTime);
         if (isset($ajat->toistuvuus_kertaa)) {
           for ($i = $ajat->toistuvuus_kertaa; $i > 0; $i--) {
-            //print(">> " . $ajat->paikka . " " . date("Y-m-d", $unixTime) . " klo: " . $ajat->alkutunnit . " - " . $ajat->lopputunnit . "\n");
             if ($ajat->toistuvuustyyppi == "Kuukausittain") {
               $unixTime = strtotime("+28 day", $unixTime);
             }
@@ -82,7 +82,7 @@ function uta_study_calendar_cron() {
               'field_study_group' => $opryhmat->nimi,
               'field_course_id' => $course->id,
               'field_event_id' => $ajat->id,
-              'field_unix_timestamp' => $ajat->alkutunnit,
+              'field_unix_timestamp' => $unixTime,
               'field_course_taxonomy' => getTaxonomyTerm($course->name),
               'field_event_start' => [date("Y-m-d", $unixTime) . "T" . $ajat->alkutunnit . ":00:00",],
               'field_event_end' => [date("Y-m-d", $unixTime) . "T" . $ajat->lopputunnit . ":00:00",],
@@ -94,7 +94,6 @@ function uta_study_calendar_cron() {
 
             //print(date("Y-m-d", $unixTime) . "T" . $ajat->alkutunnit . ":00:00\n");
 
-            //print("Node created\n");
             //if ($killSwitch > 10)
             //  die();
 
