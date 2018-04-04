@@ -29,7 +29,7 @@ function nodeExists($courseId, $eventId, $eventUnixTimestamp) {
                         'field_event_id' => $eventId,
                         'field_unix_timestamp' => $eventUnixTimestamp,
                       ]);
-  print($courseId . " " . $eventId . " " . $eventUnixTimestamp . "\n");
+  //print($courseId . " " . $eventId . " " . $eventUnixTimestamp . "\n");
   $found = false;
   foreach ($nodes as $n) {
     $found = true;
@@ -82,6 +82,7 @@ function uta_study_calendar_cron() {
               'field_study_group' => $opryhmat->nimi,
               'field_course_id' => $course->id,
               'field_event_id' => $ajat->id,
+              'field_location' => $ajat->paikka,
               'field_unix_timestamp' => $unixTime,
               'field_course_taxonomy' => getTaxonomyTerm($course->name),
               'field_event_start' => [date("Y-m-d", $unixTime) . "T" . $ajat->alkutunnit . ":00:00",],
@@ -89,7 +90,7 @@ function uta_study_calendar_cron() {
             ]);
             $killSwitch++;
             $newJob->save();
-            print("Node created\n");
+            //print("Node created\n");
 
 
             //print(date("Y-m-d", $unixTime) . "T" . $ajat->alkutunnit . ":00:00\n");
